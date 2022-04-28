@@ -45,6 +45,23 @@ app.post("/participants", async (req, res) => {
     }
 })
 
+app.get("/participants", async (req, res) => {
+    try {
+        await mongoClient.connect();
+        db = mongoClient.db(process.env.DATABASE);
+
+        const participants = await db.collection("participants").find().toArray();
+        res.send(participants);
+
+        mongoClient.close();
+    } catch (e) {
+        console.error(e);
+        res.sendStatus(422);
+
+        mongoClient.close();
+    }
+})
+
 app.listen(process.env.PORTA, () => {
     console.log(`Servidor ligado na porta ${process.env.PORTA}`);
 });
