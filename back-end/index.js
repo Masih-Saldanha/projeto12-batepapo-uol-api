@@ -13,6 +13,7 @@ const app = express();
 app.use(cors());
 app.use(json());
 
+// ADIÇÃO DE PARTICIPANTE AO CHAT
 app.post("/participants", async (req, res) => {
     const { name } = req.body;
     const lastStatus = Date.now();
@@ -31,7 +32,7 @@ app.post("/participants", async (req, res) => {
         if (verification) {
             console.log(`Usuário ${name} criado com sucesso!`);
             await db.collection("participants").insertOne({ name, lastStatus });
-            await db.collection("messages").insertOne({from: name, to: 'Todos', text: 'entra na sala...', type: 'status', time: dayjs(lastStatus).format("HH:mm:ss")});
+            await db.collection("messages").insertOne({ from: name, to: 'Todos', text: 'entra na sala...', type: 'status', time: dayjs(lastStatus).format("HH:mm:ss") });
         }
 
         res.sendStatus(201);
@@ -45,6 +46,7 @@ app.post("/participants", async (req, res) => {
     }
 })
 
+// DEVOLVE LISTA DE PARTICIPANTES DO CHAT
 app.get("/participants", async (req, res) => {
     try {
         await mongoClient.connect();
@@ -52,6 +54,35 @@ app.get("/participants", async (req, res) => {
 
         const participants = await db.collection("participants").find().toArray();
         res.send(participants);
+
+        mongoClient.close();
+    } catch (e) {
+        console.error(e);
+        res.sendStatus(422);
+
+        mongoClient.close();
+    }
+})
+
+// ATUALIZAÇÃO DE STATUS DO PARTICIPANTE DO CHAT
+app.post("/status", async (req, res) => {
+    const { user } = req.headers;
+
+    try {
+        mongoClient.connect();
+        db = mongoClient.db(process.env.DATABASE);
+
+        const isParticipantOnList = await db.collection("participants").findOne({ name: user });
+        if (!isParticipantOnList) {
+            return res.sendStatus(404);
+        }
+
+        await db.collection("participants").updateOne(
+            { name: user },
+            { $set: { lastStatus: Date.now() } }
+        )
+
+        res.sendStatus(200);
 
         mongoClient.close();
     } catch (e) {
