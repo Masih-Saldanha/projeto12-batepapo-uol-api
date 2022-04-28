@@ -1,29 +1,16 @@
-import Joi from "Joi";
+import Joi from "joi";
 
 const schema = Joi.object({
     name: Joi
         .string()
         .alphanum()
+        .min(1)
         .required(),
 
     lastStatus: Joi
+        .number()
         .integer()
         .required()
-})
-// .with('name', 'lastStatus');
+});
 
 export default schema;
-
-
-// schema.validate({ username: 'abc', birth_year: 1994 });
-// -> { value: { username: 'abc', birth_year: 1994 } }
-
-// schema.validate({});
-// -> { value: {}, error: '"username" is required' }
-
-// Also -
-
-// try {
-//     const value = await schema.validateAsync({ username: 'abc', birth_year: 1994 });
-// }
-// catch (err) { }
