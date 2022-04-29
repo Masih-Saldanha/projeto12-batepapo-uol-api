@@ -1,9 +1,8 @@
 import Joi from "joi";
 
-const schema = Joi.object({
+const participantValidation = Joi.object({
     name: Joi
         .string()
-        .alphanum()
         .min(1)
         .required(),
 
@@ -13,4 +12,4 @@ const schema = Joi.object({
         .required()
 });
 
-export default schema;
+export default participantValidation;
