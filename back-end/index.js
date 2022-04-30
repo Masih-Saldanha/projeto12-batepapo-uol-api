@@ -1,5 +1,5 @@
-import participantValidation from "./participantValidation.js"
-import messageValidation from "./messageValidation.js"
+import participantSchema from "./participantSchema.js"
+import messageSchema from "./messageSchema.js"
 import express, { json } from "express";
 import cors from "cors";
 import { MongoClient } from "mongodb";
@@ -13,6 +13,8 @@ let db;
 const app = express();
 app.use(cors());
 app.use(json());
+
+
 
 // ADIÇÃO DE PARTICIPANTE AO CHAT
 app.post("/participants", async (req, res) => {
@@ -29,7 +31,7 @@ app.post("/participants", async (req, res) => {
             return res.sendStatus(409)
         };
 
-        const verification = await participantValidation.validateAsync({ name, lastStatus });
+        const verification = await participantSchema.validateAsync({ name, lastStatus });
         if (verification) {
             await db.collection("participants").insertOne({ name, lastStatus });
             await db.collection("messages").insertOne({ from: name, to: 'Todos', text: 'entra na sala...', type: 'status', time: dayjs(lastStatus).format("HH:mm:ss") });
@@ -109,7 +111,7 @@ app.post("/messages", async (req, res) => {
             return res.sendStatus(404)
         };
 
-        const verification = await messageValidation.validateAsync({ to, text, type, from: user });
+        const verification = await messageSchema.validateAsync({ to, text, type, from: user });
         if (verification) {
             console.log(`Mensagem de ${user} para ${to} passou nos testes com sucesso!`);
             await db.collection("messages").insertOne({ from: user, to, text, type, time: dayjs(Date.now()).format("HH:mm:ss") });
@@ -162,7 +164,7 @@ app.get("/messages", async (req, res) => {
         }
 
         res.send(showMessages);
-        
+
         mongoClient.close();
     } catch (e) {
         console.error(e);

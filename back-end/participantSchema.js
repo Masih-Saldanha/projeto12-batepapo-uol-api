@@ -1,6 +1,6 @@
 import Joi from "joi";
 
-const participantValidation = Joi.object({
+const participantSchema = Joi.object({
     name: Joi
         .string()
         .min(1)
@@ -12,4 +12,4 @@ const participantValidation = Joi.object({
         .required()
 });
 
-export default participantValidation;
+export default participantSchema;

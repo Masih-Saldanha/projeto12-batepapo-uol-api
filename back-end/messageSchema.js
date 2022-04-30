@@ -1,6 +1,6 @@
 import Joi from "joi";
 
-const messageValidation = Joi.object({
+const messageSchema = Joi.object({
     to: Joi
         .string()
         .min(1)
@@ -22,4 +22,4 @@ const messageValidation = Joi.object({
         .required()
 });
 
-export default messageValidation;
+export default messageSchema;
