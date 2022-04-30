@@ -34,7 +34,7 @@ app.post("/participants", async (req, res) => {
             await db.collection("participants").insertOne({ name, lastStatus });
             await db.collection("messages").insertOne({ from: name, to: 'Todos', text: 'entra na sala...', type: 'status', time: dayjs(lastStatus).format("HH:mm:ss") });
         }
-        
+
         console.log(`Usuário ${name} criado com sucesso!`);
         res.sendStatus(201);
 
@@ -45,7 +45,7 @@ app.post("/participants", async (req, res) => {
 
         mongoClient.close();
     }
-})
+});
 
 // DEVOLVE LISTA DE PARTICIPANTES DO CHAT
 app.get("/participants", async (req, res) => {
@@ -63,7 +63,7 @@ app.get("/participants", async (req, res) => {
 
         mongoClient.close();
     }
-})
+});
 
 // ATUALIZAÇÃO DE STATUS DO PARTICIPANTE DO CHAT
 app.post("/status", async (req, res) => {
@@ -92,14 +92,12 @@ app.post("/status", async (req, res) => {
 
         mongoClient.close();
     }
-})
+});
 
 // ADIÇÃO DE MENSAGEM AO CHAT
 app.post("/messages", async (req, res) => {
     const { to, text, type } = req.body;
     const { user } = req.headers; // "USER" SE ATRIBUI À "FROM"
-
-    // const lastStatus = Date.now();
 
     try {
         await mongoClient.connect();
@@ -127,7 +125,46 @@ app.post("/messages", async (req, res) => {
 
         mongoClient.close();
     }
-})
+});
+
+// DEVOLVE LISTA DE MENSAGENS DO CHAT
+app.get("/messages", async (req, res) => {
+    const { limit } = req.query;
+    const { user } = req.headers;
+
+    try {
+        await mongoClient.connect();
+        db = mongoClient.db(process.env.DATABASE);
+
+        const isUserOnCollectionTo = await db.collection("messages").findOne({ to: user });
+        const isUserOnCollectionFrom = await db.collection("messages").findOne({ from: user });
+        if (!isUserOnCollectionTo && !isUserOnCollectionFrom) {
+            return res.sendStatus(404);
+        }
+
+        function messageFilter(messageArrayData, comparator) {
+            if (!messageArrayData) return true;
+            return messageArrayData === comparator;
+        }
+
+        const allMessages = await db.collection("messages").find().toArray();
+        const filteredMessages = allMessages.filter(message => {
+            return messageFilter(message.type, "status")
+                || messageFilter(message.type, "message")
+                || (messageFilter(message.to, user) && messageFilter(message.type, "private_message"))
+                || (messageFilter(message.from, user) && messageFilter(message.type, "private_message"))
+        })
+        // console.log(allMessages);
+
+        res.send(filteredMessages);
+        mongoClient.close();
+    } catch (e) {
+        console.error(e);
+        res.sendStatus(422);
+
+        mongoClient.close();
+    }
+});
 
 app.listen(process.env.PORTA, () => {
     console.log(`Servidor ligado na porta ${process.env.PORTA}`);
