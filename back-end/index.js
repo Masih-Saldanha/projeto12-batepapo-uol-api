@@ -153,10 +153,16 @@ app.get("/messages", async (req, res) => {
                 || messageFilter(message.type, "message")
                 || (messageFilter(message.to, user) && messageFilter(message.type, "private_message"))
                 || (messageFilter(message.from, user) && messageFilter(message.type, "private_message"))
-        })
-        // console.log(allMessages);
+        }).reverse();
+        
+        const showMessages = filteredMessages.slice(0, limit);
 
-        res.send(filteredMessages);
+        if (!limit) {
+            return res.send(filteredMessages);
+        }
+
+        res.send(showMessages);
+        
         mongoClient.close();
     } catch (e) {
         console.error(e);
