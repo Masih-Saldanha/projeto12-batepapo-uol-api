@@ -2,7 +2,7 @@ import participantSchema from "./participantSchema.js";
 import messageSchema from "./messageSchema.js";
 import express, { json } from "express";
 import cors from "cors";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import dayjs from "dayjs";
 import dotenv from "dotenv";
 dotenv.config();
@@ -38,14 +38,14 @@ setInterval(async () => {
                 console.log(`Usuário ${participant.name} retirado da sala por inatividade!`);
             })
         }
-        
+
         // mongoClient.close();
     } catch (e) {
         console.error(e);
-        
+
         // mongoClient.close();
     }
-}, 15000)
+}, 15000);
 
 // ADIÇÃO DE PARTICIPANTE AO CHAT
 app.post("/participants", async (req, res) => {
@@ -188,13 +188,92 @@ app.get("/messages", async (req, res) => {
                 || (messageFilter(message.from, user) && messageFilter(message.type, "private_message"));
         });
 
-        const showMessages = filteredMessages.slice(0, limit);
+        const showMessages = filteredMessages.slice(filteredMessages.length - limit, filteredMessages.length);
 
         if (!limit) {
             return res.send(filteredMessages);
         }
 
         res.send(showMessages);
+
+        // mongoClient.close();
+    } catch (e) {
+        console.error(e);
+        res.sendStatus(422);
+
+        // mongoClient.close();
+    }
+});
+
+// BONUS:
+
+// DELETAR MENSAGEM DO USUARIO:
+app.delete("/messages/:ID_DA_MENSAGEM", async (req, res) => {
+    const ID_DA_MENSAGEM = req.params.ID_DA_MENSAGEM;
+    const { user } = req.headers;
+
+    try {
+        await mongoClient.connect();
+        db = mongoClient.db(process.env.DATABASE);
+
+        const isMessageIdOnList = await db.collection("messages").findOne({ _id: new ObjectId(ID_DA_MENSAGEM) });
+		if (!isMessageIdOnList) {
+            console.log("ID passada não consta na lista de mensagens!");
+			return res.sendStatus(404);
+		}
+
+        if (isMessageIdOnList.from !== user) {
+            console.log("Usuário não é o mesmo da mensagem que deseja apagar!");
+			return res.sendStatus(401);
+		}
+
+        await db.collection("messages").deleteOne({ _id: new ObjectId(ID_DA_MENSAGEM) });
+        res.sendStatus(200);
+
+        // mongoClient.close();
+    } catch (e) {
+        console.error(e);
+        res.sendStatus(422);
+
+        // mongoClient.close();
+    }
+});
+
+// ADIÇÃO DE MENSAGEM AO CHAT
+app.put("/messages/:ID_DA_MENSAGEM", async (req, res) => {
+    const { to, text, type } = req.body;
+    const { user } = req.headers; // "USER" SE ATRIBUI À "FROM"
+    const ID_DA_MENSAGEM = req.params.ID_DA_MENSAGEM;
+
+    try {
+        await mongoClient.connect();
+        db = mongoClient.db(process.env.DATABASE);
+
+        const isNameOnList = await db.collection("participants").findOne({ name: user });
+        if (!isNameOnList) {
+            console.log(`Usuário ${user} não está na lista/chat!`);
+            return res.sendStatus(404);
+        };
+
+        const isMessageIdOnList = await db.collection("messages").findOne({ _id: new ObjectId(ID_DA_MENSAGEM) });
+		if (!isMessageIdOnList) {
+            console.log("ID passada não consta na lista de mensagens!");
+			return res.sendStatus(404);
+		};
+
+        if (isMessageIdOnList.from !== user) {
+            console.log("Usuário não é o mesmo da mensagem que deseja apagar!");
+			return res.sendStatus(401);
+		}
+
+        const verification = await messageSchema.validateAsync({ to, text, type, from: user });
+        if (verification) {
+            console.log(`Mensagem de ${user} para ${to} passou nos testes com sucesso!`);
+            await db.collection("messages").updateOne({ _id: new ObjectId(ID_DA_MENSAGEM) }, { $set: req.body });
+        };
+
+        console.log(`Mensagem de ${user} para ${to} editada com sucesso!`);
+        res.sendStatus(201);
 
         // mongoClient.close();
     } catch (e) {
