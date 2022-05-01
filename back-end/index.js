@@ -38,8 +38,12 @@ setInterval(async () => {
                 console.log(`Usuário ${participant.name} retirado da sala por inatividade!`);
             })
         }
+        
+        // mongoClient.close();
     } catch (e) {
         console.error(e);
+        
+        // mongoClient.close();
     }
 }, 15000)
 
@@ -67,12 +71,12 @@ app.post("/participants", async (req, res) => {
         console.log(`Usuário ${name} criado com sucesso!`);
         res.sendStatus(201);
 
-        mongoClient.close();
+        // mongoClient.close();
     } catch (e) {
         console.error(e);
         res.sendStatus(422);
 
-        mongoClient.close();
+        // mongoClient.close();
     }
 });
 
@@ -85,12 +89,12 @@ app.get("/participants", async (req, res) => {
         const participants = await db.collection("participants").find().toArray();
         res.send(participants);
 
-        mongoClient.close();
+        // mongoClient.close();
     } catch (e) {
         console.error(e);
         res.sendStatus(422);
 
-        mongoClient.close();
+        // mongoClient.close();
     }
 });
 
@@ -114,12 +118,12 @@ app.post("/status", async (req, res) => {
 
         res.sendStatus(200);
 
-        mongoClient.close();
+        // mongoClient.close();
     } catch (e) {
         console.error(e);
         res.sendStatus(422);
 
-        mongoClient.close();
+        // mongoClient.close();
     }
 });
 
@@ -147,12 +151,12 @@ app.post("/messages", async (req, res) => {
         console.log(`Mensagem de ${user} para ${to} enviada com sucesso!`);
         res.sendStatus(201);
 
-        mongoClient.close();
+        // mongoClient.close();
     } catch (e) {
         console.error(e);
         res.sendStatus(422);
 
-        mongoClient.close();
+        // mongoClient.close();
     }
 });
 
@@ -192,12 +196,12 @@ app.get("/messages", async (req, res) => {
 
         res.send(showMessages);
 
-        mongoClient.close();
+        // mongoClient.close();
     } catch (e) {
         console.error(e);
         res.sendStatus(422);
 
-        mongoClient.close();
+        // mongoClient.close();
     }
 });
 
