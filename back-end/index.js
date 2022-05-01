@@ -14,7 +14,34 @@ const app = express();
 app.use(cors());
 app.use(json());
 
+// REMOÇÃO AUTOMÁTICA DE PARTICIPANTES INATIVOS
+setInterval(async () => {
+    try {
+        mongoClient.connect();
+        db = mongoClient.db(process.env.DATABASE);
 
+        const lastStatus = Date.now();
+        const participants = await db.collection("participants").find().toArray();
+
+        const filteredParticipants = participants.filter(participant => {
+            if (
+                parseInt(participant.lastStatus) + 10000 <= parseInt(lastStatus)
+            ) {
+                return participant;
+            }
+        })
+
+        if (filteredParticipants.length > 0) {
+            filteredParticipants.map(participant => {
+                db.collection("participants").deleteOne({ name: participant.name });
+                db.collection("messages").insertOne({ from: participant.name, to: 'Todos', text: 'sai da sala...', type: 'status', time: dayjs(lastStatus).format("HH:mm:ss") });
+                console.log(`Usuário ${participant.name} retirado da sala por inatividade!`);
+            })
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}, 15000)
 
 // ADIÇÃO DE PARTICIPANTE AO CHAT
 app.post("/participants", async (req, res) => {
@@ -23,7 +50,7 @@ app.post("/participants", async (req, res) => {
 
     try {
         await mongoClient.connect();
-        db = mongoClient.db(process.env.DATABASE)
+        db = mongoClient.db(process.env.DATABASE);
 
         const isNameOnList = await db.collection("participants").findOne({ name });
         if (isNameOnList) {
@@ -156,7 +183,7 @@ app.get("/messages", async (req, res) => {
                 || (messageFilter(message.to, user) && messageFilter(message.type, "private_message"))
                 || (messageFilter(message.from, user) && messageFilter(message.type, "private_message"))
         }).reverse();
-        
+
         const showMessages = filteredMessages.slice(0, limit);
 
         if (!limit) {
