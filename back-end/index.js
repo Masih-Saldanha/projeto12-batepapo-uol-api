@@ -1,5 +1,5 @@
-import participantSchema from "./participantSchema.js"
-import messageSchema from "./messageSchema.js"
+import participantSchema from "./participantSchema.js";
+import messageSchema from "./messageSchema.js";
 import express, { json } from "express";
 import cors from "cors";
 import { MongoClient } from "mongodb";
@@ -59,7 +59,7 @@ app.post("/participants", async (req, res) => {
         const isNameOnList = await db.collection("participants").findOne({ name });
         if (isNameOnList) {
             console.log(`Usuário ${name} Já existe!`);
-            return res.sendStatus(409)
+            return res.sendStatus(409);
         };
 
         const verification = await participantSchema.validateAsync({ name, lastStatus });
@@ -134,12 +134,12 @@ app.post("/messages", async (req, res) => {
 
     try {
         await mongoClient.connect();
-        db = mongoClient.db(process.env.DATABASE)
+        db = mongoClient.db(process.env.DATABASE);
 
         const isNameOnList = await db.collection("participants").findOne({ name: user });
         if (!isNameOnList) {
             console.log(`Usuário ${user} não está na lista/chat!`);
-            return res.sendStatus(404)
+            return res.sendStatus(404);
         };
 
         const verification = await messageSchema.validateAsync({ to, text, type, from: user });
@@ -185,7 +185,7 @@ app.get("/messages", async (req, res) => {
             return messageFilter(message.type, "status")
                 || messageFilter(message.type, "message")
                 || (messageFilter(message.to, user) && messageFilter(message.type, "private_message"))
-                || (messageFilter(message.from, user) && messageFilter(message.type, "private_message"))
+                || (messageFilter(message.from, user) && messageFilter(message.type, "private_message"));
         });
 
         const showMessages = filteredMessages.slice(0, limit);
