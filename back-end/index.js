@@ -182,7 +182,7 @@ app.get("/messages", async (req, res) => {
                 || messageFilter(message.type, "message")
                 || (messageFilter(message.to, user) && messageFilter(message.type, "private_message"))
                 || (messageFilter(message.from, user) && messageFilter(message.type, "private_message"))
-        }).reverse();
+        });
 
         const showMessages = filteredMessages.slice(0, limit);
 
