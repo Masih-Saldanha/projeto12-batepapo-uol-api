@@ -4,6 +4,7 @@ import express, { json } from "express";
 import cors from "cors";
 import { MongoClient, ObjectId } from "mongodb";
 import dayjs from "dayjs";
+import { stripHtml } from "string-strip-html";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -52,24 +53,26 @@ app.post("/participants", async (req, res) => {
     const { name } = req.body;
     const lastStatus = Date.now();
 
+    const sanitizedName = stripHtml(name).result.trim();
+
     try {
         await mongoClient.connect();
         db = mongoClient.db(process.env.DATABASE);
 
-        const isNameOnList = await db.collection("participants").findOne({ name });
+        const isNameOnList = await db.collection("participants").findOne({ name: sanitizedName });
         if (isNameOnList) {
-            console.log(`Usuário ${name} Já existe!`);
+            console.log(`Usuário ${sanitizedName} Já existe!`);
             return res.sendStatus(409);
         };
 
-        const verification = await participantSchema.validateAsync({ name, lastStatus });
+        const verification = await participantSchema.validateAsync({ name: sanitizedName, lastStatus });
         if (verification) {
-            await db.collection("participants").insertOne({ name, lastStatus });
-            await db.collection("messages").insertOne({ from: name, to: 'Todos', text: 'entra na sala...', type: 'status', time: dayjs(lastStatus).format("HH:mm:ss") });
+            await db.collection("participants").insertOne({ name: sanitizedName, lastStatus });
+            await db.collection("messages").insertOne({ from: sanitizedName, to: 'Todos', text: 'entra na sala...', type: 'status', time: dayjs(lastStatus).format("HH:mm:ss") });
         }
 
-        console.log(`Usuário ${name} criado com sucesso!`);
-        res.sendStatus(201);
+        console.log(`Usuário ${sanitizedName} criado com sucesso!`);
+        res.status(201).send(sanitizedName);
 
         // mongoClient.close();
     } catch (e) {
@@ -132,23 +135,28 @@ app.post("/messages", async (req, res) => {
     const { to, text, type } = req.body;
     const { user } = req.headers; // "USER" SE ATRIBUI À "FROM"
 
+    const sanitizedTo = stripHtml(to).result.trim();
+    const sanitizedText = stripHtml(text).result.trim();
+    const sanitizedType = stripHtml(type).result.trim(); // Provavelmente não precisa mas fiz por precaução
+    const sanitizedUser = stripHtml(user).result.trim();
+
     try {
         await mongoClient.connect();
         db = mongoClient.db(process.env.DATABASE);
 
-        const isNameOnList = await db.collection("participants").findOne({ name: user });
+        const isNameOnList = await db.collection("participants").findOne({ name: sanitizedUser });
         if (!isNameOnList) {
-            console.log(`Usuário ${user} não está na lista/chat!`);
+            console.log(`Usuário ${sanitizedUser} não está na lista/chat!`);
             return res.sendStatus(404);
         };
 
-        const verification = await messageSchema.validateAsync({ to, text, type, from: user });
+        const verification = await messageSchema.validateAsync({ to: sanitizedTo, text: sanitizedText, type: sanitizedType, from: sanitizedUser });
         if (verification) {
-            console.log(`Mensagem de ${user} para ${to} passou nos testes com sucesso!`);
-            await db.collection("messages").insertOne({ from: user, to, text, type, time: dayjs(Date.now()).format("HH:mm:ss") });
+            console.log(`Mensagem de ${sanitizedUser} para ${sanitizedTo} passou nos testes com sucesso!`);
+            await db.collection("messages").insertOne({ from: sanitizedUser, to: sanitizedTo, text: sanitizedText, type: sanitizedType, time: dayjs(Date.now()).format("HH:mm:ss") });
         }
 
-        console.log(`Mensagem de ${user} para ${to} enviada com sucesso!`);
+        console.log(`Mensagem de ${sanitizedUser} para ${sanitizedTo} enviada com sucesso!`);
         res.sendStatus(201);
 
         // mongoClient.close();
@@ -217,15 +225,15 @@ app.delete("/messages/:ID_DA_MENSAGEM", async (req, res) => {
         db = mongoClient.db(process.env.DATABASE);
 
         const isMessageIdOnList = await db.collection("messages").findOne({ _id: new ObjectId(ID_DA_MENSAGEM) });
-		if (!isMessageIdOnList) {
+        if (!isMessageIdOnList) {
             console.log("ID passada não consta na lista de mensagens!");
-			return res.sendStatus(404);
-		}
+            return res.sendStatus(404);
+        }
 
         if (isMessageIdOnList.from !== user) {
             console.log("Usuário não é o mesmo da mensagem que deseja apagar!");
-			return res.sendStatus(401);
-		}
+            return res.sendStatus(401);
+        }
 
         await db.collection("messages").deleteOne({ _id: new ObjectId(ID_DA_MENSAGEM) });
         res.sendStatus(200);
@@ -239,11 +247,16 @@ app.delete("/messages/:ID_DA_MENSAGEM", async (req, res) => {
     }
 });
 
-// ADIÇÃO DE MENSAGEM AO CHAT
+// EDIÇÃO DE MENSAGEM NO CHAT
 app.put("/messages/:ID_DA_MENSAGEM", async (req, res) => {
     const { to, text, type } = req.body;
     const { user } = req.headers; // "USER" SE ATRIBUI À "FROM"
     const ID_DA_MENSAGEM = req.params.ID_DA_MENSAGEM;
+
+    const sanitizedTo = stripHtml(to).result.trim();
+    const sanitizedText = stripHtml(text).result.trim();
+    const sanitizedType = stripHtml(type).result.trim(); // Provavelmente não precisa mas fiz por precaução
+    const sanitizedUser = stripHtml(user).result.trim();
 
     try {
         await mongoClient.connect();
@@ -256,20 +269,20 @@ app.put("/messages/:ID_DA_MENSAGEM", async (req, res) => {
         };
 
         const isMessageIdOnList = await db.collection("messages").findOne({ _id: new ObjectId(ID_DA_MENSAGEM) });
-		if (!isMessageIdOnList) {
+        if (!isMessageIdOnList) {
             console.log("ID passada não consta na lista de mensagens!");
-			return res.sendStatus(404);
-		};
+            return res.sendStatus(404);
+        };
 
         if (isMessageIdOnList.from !== user) {
             console.log("Usuário não é o mesmo da mensagem que deseja apagar!");
-			return res.sendStatus(401);
-		}
+            return res.sendStatus(401);
+        }
 
-        const verification = await messageSchema.validateAsync({ to, text, type, from: user });
+        const verification = await messageSchema.validateAsync({ to: sanitizedTo, text: sanitizedText, type: sanitizedType, from: sanitizedUser });
         if (verification) {
-            console.log(`Mensagem de ${user} para ${to} passou nos testes com sucesso!`);
-            await db.collection("messages").updateOne({ _id: new ObjectId(ID_DA_MENSAGEM) }, { $set: req.body });
+            console.log(`Mensagem de ${sanitizedUser} para ${sanitizedTo} passou nos testes com sucesso!`);
+            await db.collection("messages").updateOne({ _id: new ObjectId(ID_DA_MENSAGEM) }, { $set: { to: sanitizedTo, text: sanitizedText, type: sanitizedType } });
         };
 
         console.log(`Mensagem de ${user} para ${to} editada com sucesso!`);
