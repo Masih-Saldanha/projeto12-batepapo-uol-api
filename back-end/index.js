@@ -66,9 +66,11 @@ app.post("/participants", async (req, res) => {
         };
 
         const verification = await participantSchema.validateAsync({ name: sanitizedName, lastStatus });
-        if (verification) {
+        if (!verification.error) {
             await db.collection("participants").insertOne({ name: sanitizedName, lastStatus });
             await db.collection("messages").insertOne({ from: sanitizedName, to: 'Todos', text: 'entra na sala...', type: 'status', time: dayjs(lastStatus).format("HH:mm:ss") });
+        } else {
+            return res.sendStatus(422);
         }
 
         console.log(`Usuário ${sanitizedName} criado com sucesso!`);
@@ -151,9 +153,11 @@ app.post("/messages", async (req, res) => {
         };
 
         const verification = await messageSchema.validateAsync({ to: sanitizedTo, text: sanitizedText, type: sanitizedType, from: sanitizedUser });
-        if (verification) {
+        if (!verification.error) {
             console.log(`Mensagem de ${sanitizedUser} para ${sanitizedTo} passou nos testes com sucesso!`);
             await db.collection("messages").insertOne({ from: sanitizedUser, to: sanitizedTo, text: sanitizedText, type: sanitizedType, time: dayjs(Date.now()).format("HH:mm:ss") });
+        } else {
+            return res.sendStatus(422);
         }
 
         console.log(`Mensagem de ${sanitizedUser} para ${sanitizedTo} enviada com sucesso!`);
@@ -280,10 +284,12 @@ app.put("/messages/:ID_DA_MENSAGEM", async (req, res) => {
         }
 
         const verification = await messageSchema.validateAsync({ to: sanitizedTo, text: sanitizedText, type: sanitizedType, from: sanitizedUser });
-        if (verification) {
+        if (!verification.error) {
             console.log(`Mensagem de ${sanitizedUser} para ${sanitizedTo} passou nos testes com sucesso!`);
             await db.collection("messages").updateOne({ _id: new ObjectId(ID_DA_MENSAGEM) }, { $set: { to: sanitizedTo, text: sanitizedText, type: sanitizedType } });
-        };
+        } else {
+            return res.sendStatus(422);
+        }
 
         console.log(`Mensagem de ${user} para ${to} editada com sucesso!`);
         res.sendStatus(201);
